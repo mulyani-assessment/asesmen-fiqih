@@ -38,13 +38,13 @@
         <option value="Kelas X">Kelas X</option>
       </select>
     </div>
-    <button onclick="mulaiUjian()">Mulai Mengerjakan 🚀</button>
+    <button type="button" id="btnMulai">Mulai Mengerjakan 🚀</button>
   </div>
 
   <!-- Bagian Soal Ujian -->
   <div id="quiz-section">
     <div id="daftar-soal">Memuat soal dari database...</div>
-    <button onclick="kirimJawaban()">Kirim Jawaban & Selesaikan Ujian 📤</button>
+    <button type="button" id="btnKirim">Kirim Jawaban & Selesaikan Ujian 📤</button>
   </div>
 
   <!-- Bagian Hasil -->
@@ -61,6 +61,12 @@
   let soalData = [];
   let jawabanSiswa = {};
 
+  // Menggunakan Event Listener agar tombol dijamin aktif dan bisa diklik
+  document.addEventListener("DOMContentLoaded", function() {
+    document.getElementById("btnMulai").addEventListener("click", mulaiUjian);
+    document.getElementById("btnKirim").addEventListener("click", kirimJawaban);
+  });
+
   async function mulaiUjian() {
     const nama = document.getElementById('namaSiswa').value.trim();
     const kelas = document.getElementById('kelasSiswa').value;
@@ -72,6 +78,7 @@
 
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('quiz-section').style.display = 'block';
+    document.getElementById('daftar-soal').innerHTML = "<p>Sedang mengambil soal dari database, mohon tunggu sebentar...</p>";
 
     try {
       let response = await fetch(WEB_APP_URL + "?action=getSoal");
@@ -110,4 +117,41 @@
     const nama = document.getElementById('namaSiswa').value;
     const kelas = document.getElementById('kelasSiswa').value;
 
-    let
+    let totalPoinDiterima = 0;
+    let totalPoinMaksimal = 0;
+
+    soalData.forEach(item => {
+      let poinSoal = Number(item.poin) || 2.5;
+      totalPoinMaksimal += poinSoal;
+      if (jawabanSiswa[item.id] === item.kunci) {
+        totalPoinDiterima += poinSoal;
+      }
+    });
+
+    let nilaiAkhir = totalPoinMaksimal > 0 ? Math.round((totalPoinDiterima / totalPoinMaksimal) * 100) : 0;
+
+    let payload = {
+      nama: nama,
+      kelas: kelas,
+      jawaban: jawabanSiswa,
+      nilai: nilaiAkhir
+    };
+
+    try {
+      let response = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      let result = await response.json();
+      
+      document.getElementById('quiz-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('skor-akhir').innerText = nilaiAkhir;
+    } catch (err) {
+      alert("Terjadi kesalahan saat mengirim jawaban. Coba lagi ya.");
+    }
+  }
+</script>
+
+</body>
+</html>
