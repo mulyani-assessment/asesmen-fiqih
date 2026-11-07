@@ -110,41 +110,4 @@
     const nama = document.getElementById('namaSiswa').value;
     const kelas = document.getElementById('kelasSiswa').value;
 
-    let totalPoinDiterima = 0;
-    let totalPoinMaksimal = 0;
-
-    soalData.forEach(item => {
-      let poinSoal = Number(item.poin) || 2.5;
-      totalPoinMaksimal += poinSoal;
-      if (jawabanSiswa[item.id] === item.kunci) {
-        totalPoinDiterima += poinSoal;
-      }
-    });
-
-    let nilaiAkhir = totalPoinMaksimal > 0 ? Math.round((totalPoinDiterima / totalPoinMaksimal) * 100) : 0;
-
-    let payload = {
-      nama: nama,
-      kelas: kelas,
-      jawaban: jawabanSiswa,
-      nilai: nilaiAkhir
-    };
-
-    try {
-      let response = await fetch(WEB_APP_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      let result = await response.json();
-      
-      document.getElementById('quiz-section').style.display = 'none';
-      document.getElementById('result-section').style.display = 'block';
-      document.getElementById('skor-akhir').innerText = nilaiAkhir;
-    } catch (err) {
-      alert("Terjadi kesalahan saat mengirim jawaban. Coba lagi ya.");
-    }
-  }
-</script>
-
-</body>
-</html>
+    let
