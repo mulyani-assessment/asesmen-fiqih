@@ -61,7 +61,7 @@
   let soalData = [];
   let jawabanSiswa = {};
 
-  function mulaiUjian() {
+  async function mulaiUjian() {
     const nama = document.getElementById('namaSiswa').value.trim();
     const kelas = document.getElementById('kelasSiswa').value;
 
@@ -74,44 +74,70 @@
       return;
     }
 
+    // Pindahkan tampilan seketika saat tombol diklik
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('quiz-section').style.display = 'block';
-    document.getElementById('daftar-soal').innerHTML = "<p>Sedang memuat soal...</p>";
+    document.getElementById('daftar-soal').innerHTML = "<p>Sedang mengambil soal dari database, mohon tunggu sebentar...</p>";
 
-    fetch(WEB_APP_URL + "?action=getSoal")
-      .then(response => response.json())
-      .then(data => {
-        soalData = data;
-        let htmlSoal = "";
-        if (data.length === 0) {
-          htmlSoal = "<p>Belum ada bank soal.</p>";
-        } else {
-          data.forEach((item, index) => {
-            htmlSoal += `
-              <div class="question-box">
-                <p><b>Soal ${index + 1}:</b> ${item.pertanyaan}</p>
-                <div class="options">
-                  <label><input type="radio" name="soal_${item.id}" value="A" onclick="simpanPilihan('${item.id}', 'A')"> A. ${item.opsiA}</label>
-                  <label><input type="radio" name="soal_${item.id}" value="B" onclick="simpanPilihan('${item.id}', 'B')"> B. ${item.opsiB}</label>
-                  <label><input type="radio" name="soal_${item.id}" value="C" onclick="simpanPilihan('${item.id}', 'C')"> C. ${item.opsiC}</label>
-                  <label><input type="radio" name="soal_${item.id}" value="D" onclick="simpanPilihan('${item.id}', 'D')"> D. ${item.opsiD}</label>
-                </div>
-              </div>
-            `;
-          });
-        }
-        document.getElementById('daftar-soal').innerHTML = htmlSoal;
-      })
-      .catch(err => {
-        document.getElementById('daftar-soal').innerHTML = "<p style='color:red;'>Gagal memuat soal dari server.</p>";
+    try {
+      let response = await fetch(WEB_APP_URL + "?action=getSoal", {
+        redirect: "follow",
+        mode: "cors"
       });
+      let data = await response.json();
+      soalData = data;
+
+      let htmlSoal = "";
+      if (data.length === 0) {
+        htmlSoal = "<p>Belum ada bank soal di database Google Sheets.</p>";
+      } else {
+        data.forEach((item, index) => {
+          htmlSoal += `
+            <div class="question-box">
+              <p><b>Soal ${index + 1}:</b> ${item.pertanyaan}</p>
+              <div class="options">
+                <label><input type="radio" name="soal_${item.id}" value="A" onclick="simpanPilihan('${item.id}', 'A')"> A. ${item.opsiA}</label>
+                <label><input type="radio" name="soal_${item.id}" value="B" onclick="simpanPilihan('${item.id}', 'B')"> B. ${item.opsiB}</label>
+                <label><input type="radio" name="soal_${item.id}" value="C" onclick="simpanPilihan('${item.id}', 'C')"> C. ${item.opsiC}</label>
+                <label><input type="radio" name="soal_${item.id}" value="D" onclick="simpanPilihan('${item.id}', 'D')"> D. ${item.opsiD}</label>
+              </div>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('daftar-soal').innerHTML = htmlSoal;
+    } catch (err) {
+      // Fallback menggunakan mode no-cors jika fetch standar terhalang
+      try {
+        let resFallback = await fetch(WEB_APP_URL + "?action=getSoal");
+        let dataFallback = await resFallback.json();
+        soalData = dataFallback;
+        let htmlSoal = "";
+        dataFallback.forEach((item, index) => {
+          htmlSoal += `
+            <div class="question-box">
+              <p><b>Soal ${index + 1}:</b> ${item.pertanyaan}</p>
+              <div class="options">
+                <label><input type="radio" name="soal_${item.id}" value="A" onclick="simpanPilihan('${item.id}', 'A')"> A. ${item.opsiA}</label>
+                <label><input type="radio" name="soal_${item.id}" value="B" onclick="simpanPilihan('${item.id}', 'B')"> B. ${item.opsiB}</label>
+                <label><input type="radio" name="soal_${item.id}" value="C" onclick="simpanPilihan('${item.id}', 'C')"> C. ${item.opsiC}</label>
+                <label><input type="radio" name="soal_${item.id}" value="D" onclick="simpanPilihan('${item.id}', 'D')"> D. ${item.opsiD}</label>
+              </div>
+            </div>
+          `;
+        });
+        document.getElementById('daftar-soal').innerHTML = htmlSoal;
+      } catch (e) {
+        document.getElementById('daftar-soal').innerHTML = "<p style='color:red;'>Gagal memuat soal. Pastikan koneksi internet stabil.</p>";
+      }
+    }
   }
 
   function simpanPilihan(idSoal, pilihan) {
     jawabanSiswa[idSoal] = pilihan;
   }
 
-  function kirimJawaban() {
+  async function kirimJawaban() {
     const nama = document.getElementById('namaSiswa').value;
     const kelas = document.getElementById('kelasSiswa').value;
 
@@ -119,4 +145,39 @@
     let totalPoinMaksimal = 0;
 
     soalData.forEach(item => {
-      let poinSoal = Number(item.
+      let poinSoal = Number(item.poin) || 2.5;
+      totalPoinMaksimal += poinSoal;
+      if (jawabanSiswa[item.id] === item.kunci) {
+        totalPoinDiterima += poinSoal;
+      }
+    });
+
+    let nilaiAkhir = totalPoinMaksimal > 0 ? Math.round((totalPoinDiterima / totalPoinMaksimal) * 100) : 0;
+
+    let payload = {
+      nama: nama,
+      kelas: kelas,
+      jawaban: jawabanSiswa,
+      nilai: nilaiAkhir
+    };
+
+    try {
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify(payload)
+      });
+      
+      document.getElementById('quiz-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('skor-akhir').innerText = nilaiAkhir;
+    } catch (err) {
+      document.getElementById('quiz-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('skor-akhir').innerText = nilaiAkhir;
+    }
+  }
+</script>
+
+</body>
+</html>
