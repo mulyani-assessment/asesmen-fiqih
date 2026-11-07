@@ -1,81 +1,154 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asesmen PAI Mulyani</title>
-<style>
-* {box-sizing:border-box}
-body {
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#f4f7f1;
-  color:#294536;
-}
-header {
-  background:#315b43;
-  color:white;
-  padding:22px;
-  text-align:center;
-}
-header h1 {margin:0;font-size:25px}
-header p {margin:8px 0 0}
-main {
-  max-width:850px;
-  margin:45px auto;
-  padding:20px;
-}
-.welcome {
-  background:white;
-  border-radius:18px;
-  padding:35px 20px;
-  text-align:center;
-  box-shadow:0 4px 18px #00000012;
-}
-.welcome h2 {color:#315b43}
-.buttons {
-  display:flex;
-  justify-content:center;
-  gap:15px;
-  flex-wrap:wrap;
-  margin-top:25px;
-}
-button {
-  background:#315b43;
-  color:white;
-  border:0;
-  border-radius:10px;
-  padding:14px 25px;
-  cursor:pointer;
-  font-size:15px;
-}
-button:hover {background:#477a5a}
-footer {
-  text-align:center;
-  padding:20px;
-  color:#718174;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Asesmen Digital Mulyani</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { margin: 0; background: #f0f2f5; color: #333; padding: 20px; }
+    .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h2 { color: #1a73e8; text-align: center; margin-bottom: 25px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 600; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+    button { background: #1a73e8; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; margin-top: 10px; }
+    button:hover { background: #1557b0; }
+    .question-box { margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-left: 4px solid #1a73e8; border-radius: 4px; }
+    .options label { display: block; font-weight: normal; margin: 8px 0; cursor: pointer; }
+    #quiz-section, #result-section { display: none; }
+    .alert { padding: 12px; background: #d4edda; color: #155724; border-radius: 6px; text-align: center; margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>ASESMEN PAI MULYANI</h1>
-  <p>Platform Penilaian Pendidikan Agama Islam</p>
-</header>
-<main>
-  <section class="welcome">
-    <h2>Selamat Datang!</h2>
-    <p>Selamat datang di aplikasi asesmen Pendidikan Agama Islam.</p>
-    <p>Silakan pilih akses sesuai dengan peran Anda.</p>
-    <div class="buttons">
-      <button onclick="alert('Halaman Guru akan segera dibuat!')">Masuk sebagai Guru</button>
-      <button onclick="alert('Halaman Siswa akan segera dibuat!')">Masuk sebagai Siswa</button>
+
+<div class="container">
+  <h2>🌟 Asesmen Pembelajaran Interaktif</h2>
+
+  <!-- Bagian Login Siswa -->
+  <div id="login-section">
+    <div class="form-group">
+      <label>Nama Lengkap Siswa:</label>
+      <input type="text" id="namaSiswa" placeholder="Masukkan nama lengkap Anda">
     </div>
-  </section>
-</main>
-<footer>
-  © 2026 Asesmen PAI Mulyani
-</footer>
+    <div class="form-group">
+      <label>Kelas:</label>
+      <select id="kelasSiswa">
+        <option value="">-- Pilih Kelas --</option>
+        <option value="Kelas III">Kelas III</option>
+        <option value="Kelas V">Kelas V</option>
+        <option value="Kelas VI">Kelas VI</option>
+      </select>
+    </div>
+    <button onclick="mulaiUjian()">Mulai Mengerjakan 🚀</button>
+  </div>
+
+  <!-- Bagian Soal Ujian -->
+  <div id="quiz-section">
+    <div id="daftar-soal">Memuat soal dari database...</div>
+    <button onclick="kirimJawaban()">Kirim Jawaban & Selesaikan Ujian 📤</button>
+  </div>
+
+  <!-- Bagian Hasil -->
+  <div id="result-section">
+    <div class="alert">Ujian Selesai! Terima kasih telah berpartisipasi. 🎉</div>
+    <h3>Nilai Akhir Anda: <span id="skor-akhir" style="color: #1a73e8;">0</span></h3>
+    <p>Data nilai dan jawaban Anda telah tersimpan otomatis ke dalam sistem database Google Sheets.</p>
+  </div>
+</div>
+
+<script>
+  // URL Web App Google Apps Script milik Kakak yang sudah terhubung otomatis:
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxLQHMBNq2EeKaix9p2RLNNtLu9EYPVqmpz3XMNiSy9KLDb2RHuu0nNi-iHGZQ3IQj/exec";
+
+  let soalData = [];
+  let jawabanSiswa = {};
+
+  async function mulaiUjian() {
+    const nama = document.getElementById('namaSiswa').value.trim();
+    const kelas = document.getElementById('kelasSiswa').value;
+
+    if (!nama || !kelas) {
+      alert("Mohon isi Nama dan pilih Kelas terlebih dahulu!");
+      return;
+    }
+
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('quiz-section').style.display = 'block';
+
+    try {
+      let response = await fetch(WEB_APP_URL + "?action=getSoal");
+      let data = await response.json();
+      soalData = data;
+
+      let htmlSoal = "";
+      if (data.length === 0) {
+        htmlSoal = "<p>Belum ada bank soal di database Google Sheets.</p>";
+      } else {
+        data.forEach((item, index) => {
+          htmlSoal += `
+            <div class="question-box">
+              <p><b>Soal ${index + 1}:</b> ${item.pertanyaan}</p>
+              <div class="options">
+                <label><input type="radio" name="soal_${item.id}" value="A" onclick="simpanPilihan('${item.id}', 'A')"> A. ${item.opsiA}</label>
+                <label><input type="radio" name="soal_${item.id}" value="B" onclick="simpanPilihan('${item.id}', 'B')"> B. ${item.opsiB}</label>
+                <label><input type="radio" name="soal_${item.id}" value="C" onclick="simpanPilihan('${item.id}', 'C')"> C. ${item.opsiC}</label>
+                <label><input type="radio" name="soal_${item.id}" value="D" onclick="simpanPilihan('${item.id}', 'D')"> D. ${item.opsiD}</label>
+              </div>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('daftar-soal').innerHTML = htmlSoal;
+    } catch (err) {
+      document.getElementById('daftar-soal').innerHTML = "<p style='color:red;'>Gagal memuat soal. Pastikan deployment Apps Script sudah benar.</p>";
+    }
+  }
+
+  function simpanPilihan(idSoal, pilihan) {
+    jawabanSiswa[idSoal] = pilihan;
+  }
+
+  async function kirimJawaban() {
+    const nama = document.getElementById('namaSiswa').value;
+    const kelas = document.getElementById('kelasSiswa').value;
+
+    // Hitung nilai otomatis berdasarkan kunci jawaban di database
+    let totalPoinDiterima = 0;
+    let totalPoinMaksimal = 0;
+
+    soalData.forEach(item => {
+      let poinSoal = Number(item.poin) || 10;
+      totalPoinMaksimal += poinSoal;
+      if (jawabanSiswa[item.id] === item.kunci) {
+        totalPoinDiterima += poinSoal;
+      }
+    });
+
+    let nilaiAkhir = totalPoinMaksimal > 0 ? Math.round((totalPoinDiterima / totalPoinMaksimal) * 100) : 0;
+
+    let payload = {
+      nama: nama,
+      kelas: kelas,
+      jawaban: jawabanSiswa,
+      nilai: nilaiAkhir
+    };
+
+    try {
+      let response = await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      let result = await response.json();
+      
+      document.getElementById('quiz-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+      document.getElementById('skor-akhir').innerText = nilaiAkhir;
+    } catch (err) {
+      alert("Terjadi kesalahan saat mengirim jawaban. Coba lagi ya.");
+    }
+  }
+</script>
+
 </body>
 </html>
